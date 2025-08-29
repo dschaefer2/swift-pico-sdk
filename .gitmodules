@@ -1,0 +1,7 @@
+[submodule "swift"]
+	path = swift
+	url = https://github.com/swiftlang/swift
+	branch = release/6.0
+[submodule "llvm-project"]
+	path = llvm-project
+	url = https://github.com/swiftlang/llvm-project
