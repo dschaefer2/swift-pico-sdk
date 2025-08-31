@@ -1,0 +1,16 @@
+[binaries]
+c = ['clang', '--target=armv8m.main-unknown-none-eabi', '-mcpu=cortex-m33', '-mfloat-abi=softfp', '-march=armv8m.main+fp+dsp', '-nostdlib']
+ar = 'llvm-ar'
+strip = 'llvm-strip'
+ranlib = 'llvm-ranlib'
+ld = ['ld.lld', '--target=armv8m.main-unknown-none-eabi', '-nostdlib']
+
+[host_machine]
+system = 'none'
+cpu_family = 'arm'
+cpu = 'cortex-m33'
+endian = 'little'
+
+[properties]
+needs_exe_wrapper = true
+skip_sanity_check = true

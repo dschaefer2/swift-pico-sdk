@@ -1,3 +1,5 @@
+set -ex
+
 export TOOLCHAINS=org.swift.620202508211a
 
 build_dir=$(pwd)/build
@@ -9,14 +11,10 @@ mkdir -p ${sdk_dir}
 target_triple=armv8m.main-unknown-none-eabi
 compile_flags="-mcpu=cortex-m33 -mfloat-abi=softfp -march=armv8m.main+fp+dsp"
 
-function install {
-    mkdir -p $(dirname $2)
-    cp $1 $2
-}
-
 cmake -S $(pwd)/llvm-project/compiler-rt \
     -B ${build_dir}/compiler-rt \
     -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=${sdk_dir} \
     -DCMAKE_SYSTEM_NAME=Generic \
     -DCMAKE_SYSTEM_PROCESSOR=arm \
     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
@@ -41,12 +39,17 @@ cmake -S $(pwd)/llvm-project/compiler-rt \
     -DCOMPILER_RT_BUILD_ORC=OFF \
     -DCOMPILER_RT_BUILD_CRT=OFF
 
-cmake --build ${build_dir}/compiler-rt -- builtins
+cmake --build ${build_dir}/compiler-rt -- install-builtins
 
-install ${build_dir}/compiler-rt/lib/pico/libclang_rt.builtins-armv8m.main.a \
-        ${sdk_dir}/usr/lib/${target_triple}/libclang_rt.builtins.a
+export PATH=$(dirname $(xcrun -f clang)):$PATH
 
-mkdir -p ${sdk_dir}/usr/include
+meson setup \
+    --cross-file config/pico2-arm.txt \
+    --prefix=${sdk_dir} \
+    ${build_dir}/picolibc $(pwd)/picolibc
+
+meson compile -C ${build_dir}/picolibc
+meson install -C ${build_dir}/picolibc
 
 exit
 
