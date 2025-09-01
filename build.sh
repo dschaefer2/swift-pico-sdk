@@ -6,7 +6,7 @@ build_dir=$(pwd)/build
 rm -fr ${build_dir}
 
 triple_pico2_arm=armv8m.main-unknown-none-eabi
-cflags_pico2_arm="-mcpu=cortex-m33 -mfloat-abi=softfp -march=armv8m.main+fp+dsp --sysroot ${sdk_dir}"
+cflags_pico2_arm="-mcpu=cortex-m33 -mfloat-abi=softfp -march=armv8m.main+fp+dsp"
 proc_pico2_arm=arm
 
 arches="pico2_arm"
@@ -98,19 +98,23 @@ EOF
 	  -G Ninja \
 	  --install-prefix ${sdk_dir} \
 	  --toolchain ${arch_dir}/toolchain.cmake \
-	            -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           -DLLVM_PARALLEL_LINK_JOBS=1 \
           -DLIBUNWIND_ENABLE_SHARED=NO \
           -DLIBUNWIND_ENABLE_STATIC=YES \
+          -DLIBUNWIND_ENABLE_THREADS=OFF \
+	  -DLIBUNWIND_IS_BAREMETAL=ON \
           -DLIBCXXABI_ENABLE_SHARED=NO \
           -DLIBCXXABI_ENABLE_STATIC=YES \
           -DLIBCXXABI_USE_LLVM_UNWINDER=YES \
           -DLIBCXXABI_USE_COMPILER_RT=YES \
+	  -DLIBCXXABI_ENABLE_THREADS=OFF \
+	  -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF \
+	  -DLIBCXX_ENABLE_FILESYSTEM=OFF \
           -DLIBCXX_ENABLE_SHARED=OFF \
           -DLIBCXX_ENABLE_STATIC=ON \
           -DLIBCXX_USE_COMPILER_RT=YES \
-          -DLIBCXX_HAS_PTHREAD_API=YES \
-          -DLIBCXX_HAS_MUSL_LIBC=YES \
+          -DLIBCXX_ENABLE_THREADS=OFF \
           -DLIBCXX_INCLUDE_BENCHMARKS=NO \
           -DLIBCXX_CXX_ABI=libcxxabi
 
