@@ -5,36 +5,31 @@ export TOOLCHAINS=org.swift.620202508211a
 build_dir=$(pwd)/build
 rm -fr ${build_dir}
 
-triple_pico2_arm=armv8m.main-unknown-none-eabi
-cflags_pico2_arm="-mcpu=cortex-m33 -mfloat-abi=softfp -march=armv8m.main+fp+dsp"
-proc_pico2_arm=arm
+cflags_armv8m="-mcpu=cortex-m33 -mfloat-abi=softfp -march=armv8m.main+fp+dsp"
 
-arches="pico2_arm"
+arches="armv8m.main"
 
 for arch in ${arches}; do
     arch_dir=${build_dir}/${arch}
-    sdk_dir=${arch_dir}/pico.sdk
+    sysroot=${arch_dir}/sysroot
 
-    triplev=triple_${arch}
-    triple=${!triplev}
-    cflagsv=cflags_${arch}
+    triple=${arch}-unknown-none-eabi
+    proc=${arch%.*}
+    cflagsv=cflags_${proc}
     cflags=${!cflagsv}
-    procv=proc_${arch}
-    proc=${!procv}
 
-    rm -fr ${arch_dir}
-    mkdir -p ${arch_dir}
+    mkdir -p ${sysroot}
 
     cat > ${arch_dir}/toolchain.cmake <<EOF
 set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_PROCESSOR ${proc})
+set(CMAKE_SYSTEM_PROCESSOR ${arch})
 set(CMAKE_ASM_COMPILER_TARGET ${triple})
 set(CMAKE_ASM_FLAGS "${cflags}")
 set(CMAKE_C_COMPILER_TARGET ${triple})
 set(CMAKE_C_FLAGS "${cflags}")
 set(CMAKE_CXX_COMPILER_TARGET ${triple})
 set(CMAKE_CXX_FLAGS "${cflags}")
-set(CMAKE_SYSROOT ${sdk_dir})
+set(CMAKE_SYSROOT ${sysroot})
 
 set(CMAKE_CROSSCOMPILING=YES)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
@@ -43,7 +38,7 @@ set(CMAKE_EXE_LINKER_FLAGS "-unwindlib=libunwind -rtlib=compiler-rt -stdlib=libc
 set(CMAKE_ASM_COMPILER $(xcrun -f clang))
 set(CMAKE_C_COMPILER $(xcrun -f clang))
 set(CMAKE_CXX_COMPILER $(xcrun -f clang++))
-set(CMAKE_FIND_ROOT_PATH ${sdk_dir})
+set(CMAKE_FIND_ROOT_PATH ${sysroot})
 EOF
 
     cat > ${arch_dir}/toolchain.meson <<EOF
@@ -65,38 +60,38 @@ needs_exe_wrapper = true
 skip_sanity_check = true
 EOF
 
-    meson setup \
-	  --cross-file ${arch_dir}/toolchain.meson \
-	  --prefix=${sdk_dir} \
-	  ${arch_dir}/picolibc $(pwd)/picolibc
-
-    meson compile -C ${arch_dir}/picolibc
-    meson install -C ${arch_dir}/picolibc
-    
     cmake -S $(pwd)/llvm-project/compiler-rt \
 	  -B ${arch_dir}/compiler-rt \
 	  -G Ninja \
-	  --install-prefix ${sdk_dir} \
+	  --install-prefix ${sysroot} \
 	  --toolchain ${arch_dir}/toolchain.cmake \
           -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
-          -DCOMPILER_RT_BUILD_BUILTINS=ON \
-          -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
-          -DCOMPILER_RT_BUILD_MEMPROF=OFF \
-          -DCOMPILER_RT_BUILD_PROFILE=OFF \
+	  -DCOMPILER_RT_BAREMETAL_BUILD=ON \
+	  -DCOMPILER_RT_BUILD_BUILTINS=ON \
           -DCOMPILER_RT_BUILD_SANITIZERS=OFF \
-          -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF \
           -DCOMPILER_RT_BUILD_XRAY=OFF \
-          -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
-          -DCOMPILER_RT_BUILD_ORC=OFF \
-	  -DCOMPILER_RT_BAREMETAL_BUILD=ON
+          -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
+          -DCOMPILER_RT_BUILD_PROFILE=OFF \
+	  -DCOMPILER_RT_BUILD_MEMPROF=OFF \
+	  -DCOMPILER_RT_BUILD_ORC=OFF \
+	  -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
+          -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
 
     cmake --build ${arch_dir}/compiler-rt
     cmake --build ${arch_dir}/compiler-rt -- install
 
+    meson setup \
+	  --cross-file ${arch_dir}/toolchain.meson \
+	  --prefix=${sysroot} \
+	  ${arch_dir}/picolibc $(pwd)/picolibc
+
+    meson compile -C ${arch_dir}/picolibc
+    meson install -C ${arch_dir}/picolibc
+
     cmake -S $(pwd)/llvm-project/runtimes \
 	  -B ${arch_dir}/runtimes \
 	  -G Ninja \
-	  --install-prefix ${sdk_dir} \
+	  --install-prefix ${sysroot} \
 	  --toolchain ${arch_dir}/toolchain.cmake \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           -DLLVM_PARALLEL_LINK_JOBS=1 \
