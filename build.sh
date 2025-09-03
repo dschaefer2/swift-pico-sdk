@@ -1,6 +1,6 @@
 set -ex
 
-export TOOLCHAINS=org.swift.620202508211a
+export TOOLCHAINS=org.swift.620202508301a
 
 build_dir=$(pwd)/build
 rm -fr ${build_dir}
@@ -12,13 +12,14 @@ arches="armv8m.main"
 for arch in ${arches}; do
     arch_dir=${build_dir}/${arch}
     sysroot=${arch_dir}/sysroot
+    res_dir=${sysroot}/lib/clang/17
 
     triple=${arch}-unknown-none-eabi
     proc=${arch%.*}
     cflagsv=cflags_${proc}
     cflags=${!cflagsv}
 
-    mkdir -p ${sysroot}
+    mkdir -p ${arch_dir}
 
     cat > ${arch_dir}/toolchain.cmake <<EOF
 set(CMAKE_SYSTEM_NAME Generic)
@@ -33,12 +34,15 @@ set(CMAKE_SYSROOT ${sysroot})
 
 set(CMAKE_CROSSCOMPILING=YES)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-set(CMAKE_EXE_LINKER_FLAGS "-unwindlib=libunwind -rtlib=compiler-rt -stdlib=libc++ -fuse-ld=lld -lc++ -lc++abi")
 
-set(CMAKE_ASM_COMPILER $(xcrun -f clang))
-set(CMAKE_C_COMPILER $(xcrun -f clang))
-set(CMAKE_CXX_COMPILER $(xcrun -f clang++))
+set(CMAKE_ASM_COMPILER $(xcrun -f clang) -resource-dir ${res_dir})
+set(CMAKE_C_COMPILER $(xcrun -f clang) -resource-dir ${res_dir})
+set(CMAKE_CXX_COMPILER $(xcrun -f clang++) -resource-dir ${res_dir})
 set(CMAKE_FIND_ROOT_PATH ${sysroot})
+
+set(CMAKE_OBJCOPY $(xcrun -f llvm-objcopy))
+set(CMAKE_SIZE $(xcrun -f size))
+
 EOF
 
     cat > ${arch_dir}/toolchain.meson <<EOF
@@ -60,25 +64,32 @@ needs_exe_wrapper = true
 skip_sanity_check = true
 EOF
 
+    mkdir -p ${sysroot}/lib/clang/17
+    cp -R $(dirname $(xcrun -f clang))/../lib/clang/17/include ${sysroot}/lib/clang/17
+
     cmake -S $(pwd)/llvm-project/compiler-rt \
-	  -B ${arch_dir}/compiler-rt \
-	  -G Ninja \
-	  --install-prefix ${sysroot} \
-	  --toolchain ${arch_dir}/toolchain.cmake \
+          -B ${arch_dir}/compiler-rt \
+          -G Ninja \
+	      --install-prefix ${res_dir} \
+	      --toolchain ${arch_dir}/toolchain.cmake \
           -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
-	  -DCOMPILER_RT_BAREMETAL_BUILD=ON \
-	  -DCOMPILER_RT_BUILD_BUILTINS=ON \
+          -DCOMPILER_RT_BAREMETAL_BUILD=ON \
+	      -DCOMPILER_RT_BUILD_BUILTINS=ON \
           -DCOMPILER_RT_BUILD_SANITIZERS=OFF \
           -DCOMPILER_RT_BUILD_XRAY=OFF \
           -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
           -DCOMPILER_RT_BUILD_PROFILE=OFF \
-	  -DCOMPILER_RT_BUILD_MEMPROF=OFF \
-	  -DCOMPILER_RT_BUILD_ORC=OFF \
-	  -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
+	      -DCOMPILER_RT_BUILD_MEMPROF=OFF \
+	      -DCOMPILER_RT_BUILD_ORC=OFF \
+	      -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
           -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
 
     cmake --build ${arch_dir}/compiler-rt
     cmake --build ${arch_dir}/compiler-rt -- install
+
+    # clang expects the built-ins to be here
+    mkdir -p ${res_dir}/lib/armv8m.main-unknown-none-eabi
+    ln -s ${res_dir}/lib/generic/libclang_rt.builtins-${arch}.a ${res_dir}/lib/armv8m.main-unknown-none-eabi/libclang_rt.builtins.a
 
     meson setup \
 	  --cross-file ${arch_dir}/toolchain.meson \
