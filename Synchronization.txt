@@ -1,0 +1,11 @@
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/swift/stdlib/public/Synchronization/Atomics/Atomic.swift
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/swift/stdlib/public/Synchronization/Atomics/AtomicBool.swift
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/swift/stdlib/public/Synchronization/Atomics/AtomicFloats.swift
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/swift/stdlib/public/Synchronization/Atomics/AtomicLazyReference.swift
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/swift/stdlib/public/Synchronization/Atomics/AtomicMemoryOrderings.swift
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/swift/stdlib/public/Synchronization/Atomics/AtomicOptional.swift
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/swift/stdlib/public/Synchronization/Atomics/AtomicPointers.swift
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/swift/stdlib/public/Synchronization/Atomics/AtomicRepresentable.swift
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/swift/stdlib/public/Synchronization/Atomics/WordPair.swift
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/build/armv8m.main/stdlib/AtomicIntegers.swift
+/Users/dschaefer2/swift/embedded/swift-pico-sdk/build/armv8m.main/stdlib/AtomicStorage.swift
